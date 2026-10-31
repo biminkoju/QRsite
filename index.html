@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<title>QR Site</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  try {
+    var rawTheme = localStorage.getItem('qrsite-theme');
+    var theme = null;
+    try { theme = rawTheme ? JSON.parse(rawTheme) : null; } catch (e) { theme = rawTheme; }
+    if (theme === 'light') document.documentElement.dataset.theme = 'light';
+  } catch (e) {}
+</script>
+</head>
+<body>
+<div id="update-banner" class="update-banner" role="status" hidden>
+  <span>A new version is available.</span>
+  <button id="btn-reload-app" class="primary small">Reload</button>
+</div>
+
+<header class="topbar">
+  <div class="brand"><span class="logo" aria-hidden="true">▣</span><h1>QR Site</h1></div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab active" data-tab="generate" role="tab" aria-selected="true">Generate</button>
+    <button class="tab" data-tab="scan" role="tab" aria-selected="false">Scan</button>
+    <button class="tab" data-tab="batch" role="tab" aria-selected="false">Batch</button>
+  </nav>
+  <button id="btn-theme" class="icon theme-toggle" title="Toggle theme" aria-label="Toggle theme">☀</button>
+</header>
+
+<main>
+<section id="panel-generate" class="panel active">
+  <div class="card">
+    <label class="field">
+      <span class="label">Content <small id="char-count">0 chars</small></span>
+      <textarea id="qr-input" rows="4" placeholder="Paste a link, text, anything…" spellcheck="false"></textarea>
+    </label>
+
+    <div class="row presets">
+      <button class="chip" data-preset="url">Link</button>
+      <button class="chip" data-preset="text">Text</button>
+      <button class="chip" data-preset="email">Email</button>
+      <button class="chip" data-preset="phone">Phone</button>
+      <button class="chip" data-preset="sms">SMS</button>
+      <button class="chip" data-preset="wifi">Wi-Fi</button>
+      <button class="chip" data-preset="vcard">Contact</button>
+      <button class="chip" data-preset="geo">Location</button>
+      <button class="chip" data-preset="event">Event</button>
+      <button class="chip" data-preset="whatsapp">WhatsApp</button>
+      <button class="chip" data-preset="app">App link</button>
+    </div>
+
+    <div id="form-wifi" class="struct-form" hidden>
+      <div class="grid2">
+        <label class="field"><span class="label">Network name (SSID)</span><input type="text" id="w-ssid" placeholder="MyNetwork" /></label>
+        <label class="field"><span class="label">Password</span><input type="text" id="w-pass" placeholder="password" /></label>
+        <label class="field"><span class="label">Security</span>
+          <select id="w-sec"><option>WPA</option><option>WEP</option><option value="nopass">None</option></select></label>
+        <label class="field"><span class="label">Hidden network</span>
+          <select id="w-hidden"><option value="false">No</option><option value="true">Yes</option></select></label>
+      </div>
+      <button id="w-build" class="primary">Use this Wi-Fi</button>
+    </div>
+
+    <div id="form-vcard" class="struct-form" hidden>
+      <div class="grid2">
+        <label class="field"><span class="label">Full name</span><input type="text" id="v-name" placeholder="Jane Doe" /></label>
+        <label class="field"><span class="label">Phone</span><input type="tel" id="v-phone" placeholder="+15551234567" /></label>
+        <label class="field"><span class="label">Email</span><input type="email" id="v-email" placeholder="jane@example.com" /></label>
+        <label class="field"><span class="label">Organization</span><input type="text" id="v-org" placeholder="Acme Inc." /></label>
+        <label class="field"><span class="label">Title</span><input type="text" id="v-title" placeholder="Engineer" /></label>
+        <label class="field"><span class="label">Website</span><input type="url" id="v-url" placeholder="https://example.com" /></label>
+      </div>
+      <button id="v-build" class="primary">Use this contact</button>
+    </div>
+
+    <div id="form-geo" class="struct-form" hidden>
+      <div class="grid2">
+        <label class="field"><span class="label">Latitude</span><input type="text" id="g-lat" placeholder="48.858370" /></label>
+        <label class="field"><span class="label">Longitude</span><input type="text" id="g-lng" placeholder="2.294481" /></label>
+        <label class="field span2"><span class="label">Place name (optional)</span><input type="text" id="g-label" placeholder="Eiffel Tower" /></label>
+      </div>
+      <button id="g-build" class="primary">Use this location</button>
+    </div>
+
+    <div id="form-event" class="struct-form" hidden>
+      <div class="grid2">
+        <label class="field span2"><span class="label">Title</span><input type="text" id="e-title" placeholder="Team offsite" /></label>
+        <label class="field span2"><span class="label">Location (optional)</span><input type="text" id="e-loc" placeholder="Room 4, Building A" /></label>
+        <label class="field"><span class="label">Starts</span><input type="datetime-local" id="e-start" /></label>
+        <label class="field"><span class="label">Ends (optional)</span><input type="datetime-local" id="e-end" /></label>
+      </div>
+      <button id="e-build" class="primary">Use this event</button>
+    </div>
+
+    <div id="form-whatsapp" class="struct-form" hidden>
+      <div class="grid2">
+        <label class="field"><span class="label">Phone (with country code)</span><input type="tel" id="wa-phone" placeholder="+15551234567" /></label>
+        <label class="field"><span class="label">Message (optional)</span><input type="text" id="wa-msg" placeholder="Hi there!" /></label>
+      </div>
+      <button id="wa-build" class="primary">Use this WhatsApp link</button>
+    </div>
+
+    <div id="form-app" class="struct-form" hidden>
+      <div class="grid2">
+        <label class="field"><span class="label">URL scheme</span><input type="text" id="a-scheme" placeholder="myapp" /></label>
+        <label class="field"><span class="label">Path</span><input type="text" id="a-path" placeholder="open/item/42" /></label>
+      </div>
+      <p class="hint">Builds a deep link such as <code>myapp://open/item/42</code>.</p>
+      <button id="a-build" class="primary">Use this app link</button>
+    </div>
+
+    <details class="advanced">
+      <summary>Options</summary>
+      <div class="grid2">
+        <label class="field"><span class="label">Size <small id="size-hint"></small></span>
+          <input type="range" id="size" min="128" max="1024" step="32" value="320" /></label>
+        <label class="field"><span class="label">Error correction</span>
+          <select id="ecc"><option value="L">L</option><option value="M" selected>M</option><option value="Q">Q</option><option value="H">H</option></select></label>
+        <label class="field color"><span class="label">Foreground</span>
+          <input type="color" id="fg" value="#111318" aria-label="Foreground color" /></label>
+        <label class="field color"><span class="label">Background</span>
+          <input type="color" id="bg" value="#ffffff" aria-label="Background color" /></label>
+        <label class="field span2"><span class="label">Caption under the code <small>print only</small></span>
+          <input type="text" id="qr-caption" placeholder="Scan for the menu" maxlength="120" /></label>
+        <label class="field"><span class="label">Center logo</span>
+          <input type="file" id="logo-input" accept="image/*" aria-label="Center logo image" />
+          <small class="hint" id="logo-hint">Optional. Raises error correction to H.</small></label>
+        <label class="inline-switch"><input type="checkbox" id="svg-rects" /> SVG: use rect elements</label>
+      </div>
+    </details>
+
+    <div class="qr-wrap"><div id="qr-container">
+      <canvas id="qr-canvas"></canvas>
+      <p id="qr-empty" class="muted">Your QR code will appear here.</p>
+    </div></div>
+    <p id="qr-meta" class="hint meta-line" hidden></p>
+    <p id="qr-warn" class="warn" hidden></p>
+    <div id="qr-fix-ecc-wrap" class="row" hidden>
+      <button id="qr-fix-ecc" class="small">Use L instead</button>
+    </div>
+
+    <div class="row actions">
+      <button id="btn-download" class="primary" disabled>Download PNG</button>
+      <button id="btn-download-svg" disabled>Download SVG</button>
+      <button id="btn-print-window" disabled>Print</button>
+      <button id="btn-print" disabled>Print page</button>
+      <button id="btn-copy-image" disabled>Copy image</button>
+      <button id="btn-share" hidden disabled>Share</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row spread">
+      <h2 class="section-title">History</h2>
+      <div class="row">
+        <button id="btn-export-history" class="small">Export</button>
+        <button id="btn-import-history" class="small">Import</button>
+        <button id="btn-clear-history" class="small">Clear</button>
+      </div>
+    </div>
+    <input type="file" id="history-import" accept="application/json,.json" hidden />
+    <ul id="gen-history" class="history"></ul>
+  </div>
+</section>
+
+<section id="panel-scan" class="panel">
+  <div class="card">
+    <div class="segmented" role="tablist" aria-label="Scan source">
+      <button class="seg active" data-scan="camera" role="tab" aria-selected="true">Camera</button>
+      <button class="seg" data-scan="image" role="tab" aria-selected="false">Image</button>
+    </div>
+
+    <div id="scan-camera" class="scan-view active">
+      <div class="video-wrap">
+        <video id="video" playsinline muted></video>
+        <div id="scan-overlay" class="overlay"></div>
+        <div id="camera-placeholder" class="video-placeholder">
+          <p>Camera is off</p>
+          <button id="btn-start-camera" class="primary">Start camera</button>
+        </div>
+      </div>
+      <div class="row actions">
+        <button id="btn-stop-camera" hidden>Stop camera</button>
+        <label class="inline-switch"><input type="checkbox" id="torch" disabled /> Flashlight</label>
+        <button id="btn-switch-camera" hidden>Switch camera</button>
+        <label class="inline-switch"><input type="checkbox" id="multi-scan" /> Multi-code mode</label>
+      </div>
+      <p class="hint">Point the camera at a QR code or barcode.</p>
+    </div>
+
+    <div id="scan-image" class="scan-view">
+      <div id="dropzone" class="dropzone" tabindex="0">
+        <p><strong>Drop an image</strong>, click to choose, or paste with Ctrl+V</p>
+        <input type="file" id="file-input" accept="image/*" hidden />
+      </div>
+
+      <div id="editor" class="editor" hidden>
+        <p class="hint">Drag on the image to select a region, or scan the whole image.</p>
+        <div class="canvas-wrap">
+          <canvas id="image-canvas"></canvas>
+          <div id="selection" class="selection" hidden></div>
+        </div>
+        <div class="row actions">
+          <button id="btn-scan-all">Scan whole image</button>
+          <button id="btn-scan-region" disabled class="primary">Scan selection</button>
+          <button id="btn-clear-selection" disabled>Clear selection</button>
+          <button id="btn-new-image">New image</button>
+          <label class="inline-switch"><input type="checkbox" id="multi-scan-image" /> Multi-code</label>
+        </div>
+      </div>
+    </div>
+
+    <div id="scan-result" class="result" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <div class="result-head">
+        <span id="result-badge" class="badge">Detected</span>
+        <button id="btn-clear-result" class="icon" aria-label="Dismiss result">✕</button>
+      </div>
+      <textarea id="result-text" rows="3" readonly aria-label="Decoded content"></textarea>
+      <div class="row actions">
+        <button id="btn-copy-result" class="primary">Copy</button>
+        <button id="btn-open-result">Open</button>
+        <button id="btn-generate-from-result">Make QR</button>
+        <button id="btn-restyle-from-result">Make styled QR</button>
+      </div>
+      <p id="result-meta" class="hint"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row spread">
+      <h2 class="section-title">Scan history</h2>
+      <button id="btn-clear-scan-history" class="small">Clear</button>
+    </div>
+    <ul id="scan-history" class="history"></ul>
+  </div>
+</section>
+
+<section id="panel-batch" class="panel">
+  <div class="card">
+    <h2 class="section-title">Batch generate from CSV</h2>
+    <p class="hint">One item per row. Optional header row with <code>text</code>, or use two columns: <code>text,filename</code>. Quotes are honored for commas.</p>
+    <label class="field">
+      <span class="label">CSV file</span>
+      <input type="file" id="csv-input" accept=".csv,text/csv" />
+    </label>
+    <label class="field">
+      <span class="label">Or paste CSV</span>
+      <textarea id="csv-text" rows="5" placeholder="https://example.com/a,page-a&#10;https://example.com/b,page-b"></textarea>
+    </label>
+    <label class="inline-switch"><input type="checkbox" id="batch-svg" /> Output SVG instead of PNG</label>
+    <div class="row actions">
+      <button id="btn-batch-run" class="primary">Generate &amp; download ZIP</button>
+      <button id="btn-batch-preview">Preview first</button>
+      <button id="btn-batch-cancel" hidden>Cancel</button>
+    </div>
+    <p id="batch-status" class="hint" aria-live="polite"></p>
+    <ul id="batch-errors" class="batch-errors" hidden></ul>
+    <div id="batch-preview" class="batch-preview"></div>
+  </div>
+</section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="vendor/qrcode.min.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/zxing.min.js"></script>
+<script src="lib-core.js"></script>
+<script src="lib-csv.js"></script>
+<script src="app.js"></script>
+<script src="scan.js"></script>
+<script src="batch.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+      const banner = document.getElementById('update-banner');
+      const reloadBtn = document.getElementById('btn-reload-app');
+      const showBanner = () => { if (banner) banner.hidden = false; };
+      try {
+        const reg = await navigator.serviceWorker.register('sw.js');
+        if (reg.waiting && navigator.serviceWorker.controller) showBanner();
+        reg.addEventListener('updatefound', () => {
+          const worker = reg.installing;
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) showBanner();
+          });
+        });
+        if (reloadBtn) {
+          reloadBtn.addEventListener('click', () => {
+            navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true });
+            if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+            else location.reload();
+          });
+        }
+      } catch (e) { console.warn('SW failed', e); }
+    });
+  }
+</script>
+</body>
+</html>

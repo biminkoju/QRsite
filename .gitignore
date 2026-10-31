@@ -1,0 +1,20 @@
+# dependencies / tooling
+node_modules/
+package-lock.json
+
+# test + tool output
+test-results/
+playwright-report/
+coverage/
+
+# editors and OS cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# local scratch
+*.log
+tmp/
+.cache/
