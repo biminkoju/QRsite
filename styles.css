@@ -66,6 +66,9 @@
 
   /* Borders. */
   --border-width: 1px;
+
+  /* Motion (short, ease-out only). */
+  --dur-fast: 120ms;
 }
 
 /* Light mode — off-white, never pure #fff on #000. */
@@ -393,19 +396,23 @@ input[type="range"] { width: 100%; accent-color: var(--color-accent); }
   text-underline-offset: var(--space-1);
   text-decoration-color: var(--color-text-muted);
 }
-.advanced summary::marker {
+.advanced summary::marker { display: none; }
+.advanced summary::-webkit-details-marker { display: none; }
+.advanced summary::after {
+  content: "▶";
+  margin-left: var(--space-1);
   color: var(--color-accent);
   font-size: var(--text-xs);
+  display: inline-block;
   transition: transform var(--dur-fast) ease-out;
 }
 .advanced[open] summary {
   color: var(--color-accent);
   text-decoration-color: var(--color-accent);
 }
-.advanced[open] summary::marker {
-  transform: rotate(180deg);
+.advanced[open] summary::after {
+  transform: rotate(90deg);
 }
-.advanced summary::-webkit-details-marker { display: none; }
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 .struct-form .grid2 { margin-top: 0; }
