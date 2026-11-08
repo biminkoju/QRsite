@@ -9,13 +9,25 @@ window.QRS = window.QRS || {};
   QRS.bytes = function (s) { return QRS.enc.encode(s).length; };
 
   var toastTimer = null;
-  QRS.toast = function (msg) {
+  QRS.toast = function (msg, opts) {
     var el = QRS.$('toast');
     if (!el) return;
-    el.textContent = msg;
+    var undoHtml = '';
+    if (opts && opts.undo) {
+      undoHtml = ' <button class="small" id="toast-undo">' + (opts.undoLabel || 'Undo') + '</button>';
+    }
+    el.innerHTML = msg + undoHtml;
     el.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+    var undoBtn = el.querySelector('#toast-undo');
+    if (undoBtn) {
+      undoBtn.addEventListener('click', function () {
+        el.classList.remove('show');
+        clearTimeout(toastTimer);
+        opts.undo();
+      }, { once: true });
+    }
   };
 
   QRS.store = {
@@ -62,7 +74,12 @@ window.QRS = window.QRS || {};
   };
 
   (function initTheme() {
-    if (QRS.readTheme() === 'light') document.documentElement.dataset.theme = 'light';
+    var stored = QRS.readTheme();
+    if (stored === 'light') {
+      document.documentElement.dataset.theme = 'light';
+    } else if (stored === null && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      document.documentElement.dataset.theme = 'light';
+    }
     syncThemeBtn();
   })();
 

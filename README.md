@@ -21,20 +21,24 @@ The smoke tests need no dependencies. They cover the QR generator, the CSV parse
 - Any content: links, text, email, phone, SMS.
 - Structured presets: Wi-Fi, contact, location (geo), event (VEVENT), WhatsApp, and app deep links.
 - Size auto-grows with content and error correction; the slider can't go below what the content needs.
+- Quick size presets: Card 320, Sticker 512, Poster 1024 chips next to the slider.
 - Shows the QR version and error-correction level, e.g. `v4 · ECC M · 33x33 modules`.
 - If the content doesn't fit, offers a lower error-correction level instead of just failing.
 - Warns on dark backgrounds and low contrast, which many scanners can't read.
 - Optional caption under the code (PNG and print); center logo forces error correction to H.
 - Custom colors, PNG and SVG download (path or `rect` output), page print, copy image, native share.
-- History in localStorage with thumbnails and one-tap reload; export/import as JSON.
+- Border when printing checkbox adds a quiet-zone border + padding in the print popup.
+- History in localStorage with thumbnails and one-tap reload; export/import as JSON. Clearing history can be undone from the toast within a few seconds.
 
 **Scan**
 - Live camera scanning, rear camera default, switch camera, flashlight.
 - Multi-code camera mode: decodes several codes per frame by masking regions.
-- Image scan: click, drop or paste. Whole-image scan on load with upscale retries for tiny codes, plus drag-a-region selection that scans immediately.
+- Image scan: click, drop or paste one or more images; they decode sequentially with a thumbnail per result. Whole-image scan on load with upscale retries for tiny codes, plus drag-a-region selection that scans immediately.
 - Barcodes via ZXing (EAN/UPC/Code128/Code39/ITF) in addition to QR.
-- Scan history with cropped thumbnails.
+- Scan history with cropped thumbnails. Clearing history can be undone from the toast within a few seconds.
 - "Make QR" re-encodes a scan; "Make styled QR" re-encodes it with your current colors, logo and caption.
+- Keyboard shortcuts: `Escape` dismisses a scan result; `Enter` scans the whole image when viewing the image tab.
+- Result actions: Copy, Open (URLs), Copy vCard (when a `BEGIN:VCARD` result is detected), "Make QR", "Make styled QR". The result domain is shown under URL results so you can see where a link goes before opening.
 
 **Batch**
 - CSV in, ZIP of PNGs or SVGs out. Accepts one-column text or `text,filename`, with or without a header row. Preview renders the first few.

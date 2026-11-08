@@ -14,6 +14,7 @@
   const bgEl = $('bg');
   const captionEl = $('qr-caption');
   const svgRectsEl = $('svg-rects');
+  const printBorderEl = $('print-border');
   const logoInput = $('logo-input');
   const logoHint = $('logo-hint');
   const metaEl = $('qr-meta');
@@ -321,8 +322,22 @@
 
   input.addEventListener('input', () => { emptyMsg.textContent = 'Your QR code will appear here.'; schedule(160); scheduleHistory(); });
   [sizeEl, eccEl, fgEl, bgEl, captionEl, svgRectsEl].forEach((el) => {
-    el.addEventListener('input', () => schedule(80));
+    el.addEventListener('input', () => {
+      schedule(80);
+      if (el === sizeEl) {
+        document.querySelectorAll('.size-preset').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      }
+    });
     el.addEventListener('change', () => schedule(80));
+  });
+
+  document.querySelectorAll('.size-preset').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      sizeEl.value = btn.dataset.size;
+      document.querySelectorAll('.size-preset').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      btn.setAttribute('aria-pressed', 'true');
+      renderQR();
+    });
   });
 
   fixBtn.addEventListener('click', () => {
@@ -518,9 +533,14 @@
   }
 
   $('btn-clear-history').addEventListener('click', () => {
+    var snapshot = store.get(GEN_HISTORY_KEY, []);
+    if (!snapshot.length) { toast('Nothing to clear'); return; }
     store.del(GEN_HISTORY_KEY);
     renderHistory();
-    toast('History cleared');
+    toast('Generation history cleared', {
+      undo: function () { store.set(GEN_HISTORY_KEY, snapshot); renderHistory(); },
+      undoLabel: 'Undo'
+    });
   });
 
   $('btn-export-history').addEventListener('click', () => {
@@ -593,6 +613,12 @@
     return caption ? '<figcaption>' + escapeXml(caption) + '</figcaption>' : '';
   }
 
+  function printBorderMarkup() {
+    return printBorderEl && printBorderEl.checked
+      ? 'img{border:2px solid #111;padding:6mm;box-sizing:border-box}'
+      : '';
+  }
+
   btnPrint.addEventListener('click', () => {
     if (!currentCanvasDataUrl) return;
     const win = window.open('', '_blank');
@@ -600,7 +626,8 @@
     win.document.write('<!DOCTYPE html><title>Print QR</title>' +
       '<style>@page{margin:12mm}body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif}' +
       'figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6mm}' +
-      'img{width:80mm;height:auto;image-rendering:pixelated}figcaption{font-size:5mm;font-weight:600}</style>' +
+      'img{width:80mm;height:auto;image-rendering:pixelated}' + printBorderMarkup() +
+      'figcaption{font-size:5mm;font-weight:600}</style>' +
       '<figure><img src="' + currentCanvasDataUrl + '" alt="QR code">' + captionMarkup() + '</figure>');
     win.document.close();
     setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 350);

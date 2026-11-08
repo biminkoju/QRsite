@@ -6,8 +6,10 @@
   const resultBox = $('scan-result');
   const resultText = $('result-text');
   const resultMeta = $('result-meta');
+  const resultDomain = $('result-domain');
   const resultBadge = $('result-badge');
   const btnOpen = $('btn-open-result');
+  const btnCopyVcard = $('btn-copy-vcard');
 
   function safeUrl(text) {
     try {
@@ -26,12 +28,16 @@
     const url = safeUrl(text);
     btnOpen.hidden = !url;
     if (url) btnOpen.dataset.url = url;
+    resultDomain.hidden = !url;
+    resultDomain.textContent = url ? new URL(url).hostname : '';
+    btnCopyVcard.hidden = !text.trim().startsWith('BEGIN:VCARD');
     addHistory(text, meta, thumb);
   }
 
   function showError(msg) {
     resultBox.hidden = false;
     resultText.value = '';
+    resultDomain.hidden = true;
     resultMeta.textContent = msg;
     resultBadge.textContent = 'Not found';
     resultBadge.classList.add('error');
@@ -41,6 +47,10 @@
   $('btn-clear-result').addEventListener('click', () => { resultBox.hidden = true; });
   $('btn-copy-result').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(resultText.value); toast('Copied'); }
+    catch (e) { toast('Copy failed'); }
+  });
+  btnCopyVcard.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(resultText.value); toast('vCard copied'); }
     catch (e) { toast('Copy failed'); }
   });
   btnOpen.addEventListener('click', () => {
@@ -106,9 +116,14 @@
   }
 
   $('btn-clear-scan-history').addEventListener('click', () => {
+    var snapshot = store.get(SCAN_HISTORY_KEY, []);
+    if (!snapshot.length) { toast('Nothing to clear'); return; }
     store.del(SCAN_HISTORY_KEY);
     renderHistory();
-    toast('Scan history cleared');
+    toast('Scan history cleared', {
+      undo: function () { store.set(SCAN_HISTORY_KEY, snapshot); renderHistory(); },
+      undoLabel: 'Undo'
+    });
   });
 
   renderHistory();
@@ -340,14 +355,16 @@
   dropzone.addEventListener('click', () => fileInput.click());
   dropzone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
   fileInput.addEventListener('change', () => {
-    if (fileInput.files && fileInput.files[0]) loadFile(fileInput.files[0]);
+    const files = fileInput.files && Array.prototype.slice.call(fileInput.files);
+    if (!files || !files.length) return;
+    scanImageQueue(files);
     fileInput.value = '';
   });
   ['dragenter', 'dragover'].forEach((ev) => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add('drag'); }));
   ['dragleave', 'drop'].forEach((ev) => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.remove('drag'); }));
   dropzone.addEventListener('drop', (e) => {
-    const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) loadFile(f);
+    const files = e.dataTransfer.files && Array.prototype.slice.call(e.dataTransfer.files);
+    if (files && files.length) scanImageQueue(files);
   });
 
   window.addEventListener('paste', (e) => {
@@ -367,7 +384,21 @@
     }
   });
 
-  function loadFile(file) {
+  function scanImageQueue(files) {
+    files = files.filter(function (f) { return f.type.indexOf('image/') === 0; });
+    if (!files.length) { toast('No images selected'); return; }
+    switchTab('scan');
+    document.querySelector('.seg[data-scan="image"]').click();
+    var i = 0;
+    function next() {
+      if (i >= files.length) return;
+      loadFile(files[i], i === files.length - 1);
+      i++;
+    }
+    next();
+  }
+
+  function loadFile(file, last) {
     if (file.type.indexOf('image/') !== 0) { toast('That is not an image'); return; }
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -384,8 +415,10 @@
       editor.hidden = false;
       loaded = true;
       clearSel();
-      setTimeout(() => {
+      setTimeout(function () {
         if (!scanWhole(true)) showError('No QR code found in the whole image. Drag a region to search a smaller area.');
+        if (last) return;
+        next();
       }, 50);
     };
     img.onerror = () => toast('Could not load that image');
@@ -575,4 +608,23 @@
   })();
 
   window.addEventListener('beforeunload', stopCamera);
+
+  /* Keyboard shortcuts */
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const resultBox = $('scan-result');
+      if (resultBox && !resultBox.hidden) {
+        $('btn-clear-result').click();
+        return;
+      }
+    }
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const active = document.querySelector('.scan-view.active');
+      if (active && active.id === 'scan-image') {
+        const btnScanAll = $('btn-scan-all');
+        if (btnScanAll && !btnScanAll.hidden) btnScanAll.click();
+        e.preventDefault();
+      }
+    }
+  });
 })();
