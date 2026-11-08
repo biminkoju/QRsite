@@ -43,6 +43,7 @@
       <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
     </svg>
   </button>
+  <label class="inline-switch" style="margin-left:var(--space-2)"><input type="checkbox" id="density-compact" /> Compact</label>
 </header>
 
 <main>
@@ -238,6 +239,7 @@
       <div id="scan-result" class="result" role="status" aria-live="polite" aria-atomic="true" hidden>
         <div class="result-head">
           <span id="result-badge" class="badge">Detected</span>
+          <span id="result-type" class="type-chip" hidden></span>
           <button id="btn-clear-result" class="icon" aria-label="Dismiss result">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -245,13 +247,18 @@
             </svg>
           </button>
         </div>
-        <textarea id="result-text" rows="3" readonly aria-label="Decoded content"></textarea>
+        <textarea id="result-text" rows="3" aria-label="Decoded content"></textarea>
         <p id="result-domain" class="result-meta-domain" hidden></p>
         <p id="result-meta" class="hint"></p>
         <div class="row actions">
           <button id="btn-copy-result" class="primary">Copy</button>
-          <button id="btn-copy-vcard" class="small" hidden>Copy vCard</button>
+          <button id="btn-copy-vcard" class="small hidden">Copy vCard</button>
+          <button id="btn-share-result" class="small hidden">Share</button>
           <button id="btn-open-result">Open</button>
+          <button id="btn-copy-wifi" class="small hidden">Copy Wi-Fi password</button>
+          <button id="btn-add-contacts" class="small hidden">Add to contacts</button>
+          <button id="btn-download-result" class="small">Download .txt</button>
+          <button id="btn-print-result" class="small">Print result</button>
           <button id="btn-generate-from-result">Make QR</button>
           <button id="btn-restyle-from-result">Make styled QR</button>
         </div>
@@ -261,7 +268,16 @@
     <div class="card">
       <div class="row spread">
         <h2 class="section-title">Scan history</h2>
-        <button id="btn-clear-scan-history" class="small">Clear</button>
+        <div class="row">
+          <button id="btn-export-scan-history" class="small">Export</button>
+          <button id="btn-clear-scan-history" class="small">Clear</button>
+        </div>
+      </div>
+      <label class="field"><span class="label">Filter <small id="scan-filter-count"></small></span>
+        <input type="search" id="scan-filter" placeholder="Search scan history…" aria-label="Filter scan history" /></label>
+      <div class="row">
+        <label class="inline-switch"><input type="checkbox" id="scan-prune" /> Auto-prune older than 30 days</label>
+        <span class="hint small-hint" style="margin-left:var(--space-2)">Local only — nothing leaves your device.</span>
       </div>
       <ul id="scan-history" class="history"></ul>
     </div>
@@ -292,7 +308,7 @@
   </section>
 
   <p class="row spread" style="margin-top: var(--space-6);">
-    <a href="../" class="small">Back to tools</a>
+    <a href="https://biminkoju.com.np/tools.html" class="small">Back to tools</a>
   </p>
 </main>
 

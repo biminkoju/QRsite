@@ -10,6 +10,11 @@
   const resultBadge = $('result-badge');
   const btnOpen = $('btn-open-result');
   const btnCopyVcard = $('btn-copy-vcard');
+  const btnShareResult = $('btn-share-result');
+  const btnCopyWifi = $('btn-copy-wifi');
+  const btnAddContacts = $('btn-add-contacts');
+  const btnDownloadResult = $('btn-download-result');
+  const btnPrintResult = $('btn-print-result');
 
   function safeUrl(text) {
     try {
@@ -19,9 +24,24 @@
     return null;
   }
 
+  function detectResultType(text) {
+    const t = text.trim();
+    if (t.startsWith('BEGIN:VCARD')) return { id: 'vcard', label: 'Contact' };
+    if (t.startsWith('BEGIN:VEVENT')) return { id: 'event', label: 'Calendar event' };
+    if (t.startsWith('WIFI:')) return { id: 'wifi', label: 'Wi-Fi network' };
+    if (/^geo:[-0-9.,]+/.test(t)) return { id: 'geo', label: 'Location' };
+    if (/^smsto:/.test(t)) return { id: 'sms', label: 'SMS' };
+    if (/^tel:/.test(t)) return { id: 'phone', label: 'Phone number' };
+    if (/^mailto:/.test(t)) return { id: 'email', label: 'Email address' };
+    const url = safeUrl(t);
+    if (url) return { id: 'url', label: 'Link' };
+    return { id: 'text', label: 'Text' };
+  }
+
   function showResult(text, meta, thumb) {
     resultBox.hidden = false;
     resultText.value = text;
+    resultText.readOnly = false;
     resultMeta.textContent = meta || '';
     resultBadge.textContent = 'Detected';
     resultBadge.classList.remove('error');
@@ -31,17 +51,36 @@
     resultDomain.hidden = !url;
     resultDomain.textContent = url ? new URL(url).hostname : '';
     btnCopyVcard.hidden = !text.trim().startsWith('BEGIN:VCARD');
-    addHistory(text, meta, thumb);
+
+    /* Result type detection + contextual buttons */
+    const type = detectResultType(text);
+    resultType.hidden = !type;
+    resultType.textContent = type.label;
+
+    btnShareResult.hidden = !navigator.share;
+    btnCopyWifi.hidden = type.id !== 'wifi';
+    btnAddContacts.hidden = type.id !== 'vcard';
+    btnDownloadResult.hidden = false;
+    btnPrintResult.hidden = false;
+
+    addHistory(text, meta, thumb, type.id);
   }
 
   function showError(msg) {
     resultBox.hidden = false;
     resultText.value = '';
+    resultText.readOnly = false;
     resultDomain.hidden = true;
+    resultType.hidden = true;
     resultMeta.textContent = msg;
     resultBadge.textContent = 'Not found';
     resultBadge.classList.add('error');
     btnOpen.hidden = true;
+    btnShareResult.hidden = true;
+    btnCopyWifi.hidden = true;
+    btnAddContacts.hidden = true;
+    btnDownloadResult.hidden = true;
+    btnPrintResult.hidden = true;
   }
 
   $('btn-clear-result').addEventListener('click', () => { resultBox.hidden = true; });
@@ -55,6 +94,45 @@
   });
   btnOpen.addEventListener('click', () => {
     if (btnOpen.dataset.url) window.open(btnOpen.dataset.url, '_blank', 'noopener');
+  });
+  btnShareResult.addEventListener('click', async () => {
+    try { await navigator.share({ title: 'QR Scan Result', text: resultText.value }); }
+    catch (e) { /* cancelled */ }
+  });
+  btnCopyWifi.addEventListener('click', async () => {
+    const text = resultText.value;
+    const m = text.match(/P:([^;]+)/);
+    if (m) { try { await navigator.clipboard.writeText(m[1]); toast('Wi-Fi password copied'); }
+      catch (e) { toast('Copy failed'); } }
+    else toast('No Wi-Fi password found');
+  });
+  btnAddContacts.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(resultText.value); toast('Contact copied'); }
+    catch (e) { toast('Copy failed'); }
+  });
+  btnDownloadResult.addEventListener('click', () => {
+    const text = resultText.value.trim();
+    if (!text) return;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'qr-scan-result.txt'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Downloaded result');
+  });
+  btnPrintResult.addEventListener('click', () => {
+    const text = resultText.value.trim();
+    if (!text) return;
+    const win = window.open('', '_blank');
+    if (!win) { toast('Allow popups to print'); return; }
+    const escaped = String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    win.document.write('<!DOCTYPE html><title>QR Scan Result</title>' +
+      '<style>body{margin:0;font-family:system-ui,sans-serif;padding:24px;background:#fff;color:#000}' +
+      'pre{white-space:pre-wrap;word-wrap:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px}' +
+      'h1{font-size:20px;margin:0 0 12px}</style>' +
+      '<h1>QR Scan Result</h1><pre>' + escaped + '</pre>');
+    win.document.close();
+    setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 350);
   });
   $('btn-generate-from-result').addEventListener('click', () => {
     window.QRSGen.setInput(resultText.value);
@@ -75,24 +153,59 @@
   });
 
   /* ---- history ---- */
-  function addHistory(text, meta, thumb) {
+  function addHistory(text, meta, thumb, typeId) {
     const list = store.get(SCAN_HISTORY_KEY, []);
     if (list.length && list[0].text === text && Date.now() - list[0].at < 3000) return;
-    list.unshift({ text, meta: meta || '', thumb: thumb || '', at: Date.now() });
+    list.unshift({ text, meta: meta || '', thumb: thumb || '', at: Date.now(), type: typeId || 'text', starred: false });
     store.set(SCAN_HISTORY_KEY, list.slice(0, HISTORY_MAX));
     renderHistory();
   }
 
+  function typeIcon(typeId) {
+    const icons = {
+      url: '↗', wifi: '📶', vcard: '👤', event: '📅', geo: '📍',
+      sms: '💬', phone: '📞', email: '✉', text: '📄'
+    };
+    return icons[typeId] || '📄';
+  }
+
   function renderHistory() {
     const list = $('scan-history');
+    const filter = $('scan-filter');
+    const countEl = $('scan-filter-count');
+    const prune = $('scan-prune');
+
+    /* Auto-prune: drop items older than 30 days if enabled */
+    const items = store.get(SCAN_HISTORY_KEY, []);
+    if (prune && prune.checked) {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const kept = items.filter((it) => it.at > cutoff);
+      if (kept.length !== items.length) {
+        store.set(SCAN_HISTORY_KEY, kept);
+        renderHistory();
+        return;
+      }
+    }
+
+    let term = (filter && filter.value) ? filter.value.trim().toLowerCase() : '';
+    let shown = items.filter((it) => {
+      if (term && !it.text.toLowerCase().includes(term)) return false;
+      return true;
+    });
+
+    /* Starred first */
+    shown = shown.sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+
+    if (countEl) countEl.textContent = term ? ('' + shown.length + ' match' + (shown.length !== 1 ? 'es' : '')) : ('' + items.length + ' item' + (items.length !== 1 ? 's' : ''));
+
     list.innerHTML = '';
-    store.get(SCAN_HISTORY_KEY, []).forEach((item) => {
+    shown.forEach((item) => {
       const li = document.createElement('li');
       li.className = 'history-item';
       const img = document.createElement('img');
       img.className = 'thumb'; img.alt = '';
       if (item.thumb) img.src = item.thumb;
-      else { img.classList.add('placeholder'); img.textContent = 'QR'; }
+      else { img.classList.add('placeholder'); img.textContent = typeIcon(item.type); }
       const meta = document.createElement('div'); meta.className = 'meta';
       const val = document.createElement('span'); val.className = 'value'; val.textContent = item.text;
       const sub = document.createElement('span'); sub.className = 'sub'; sub.textContent = new Date(item.at).toLocaleString();
@@ -104,12 +217,26 @@
       });
       const reuse = document.createElement('button'); reuse.textContent = 'QR';
       reuse.addEventListener('click', () => { window.QRSGen.setInput(item.text); switchTab('generate'); });
+      const star = document.createElement('button');
+      star.textContent = item.starred ? '★' : '☆';
+      star.setAttribute('aria-label', item.starred ? 'Unfavorite' : 'Favorite');
+      star.addEventListener('click', () => {
+        const all = store.get(SCAN_HISTORY_KEY, []);
+        const idx = all.findIndex((x) => x.at === item.at && x.text === item.text);
+        if (idx !== -1) {
+          all[idx].starred = !all[idx].starred;
+          store.set(SCAN_HISTORY_KEY, all);
+          renderHistory();
+          toast(item.starred ? 'Unfavorited' : 'Favorited');
+        }
+      });
       const del = document.createElement('button'); del.textContent = '✕';
+      del.setAttribute('aria-label', 'Delete history entry');
       del.addEventListener('click', () => {
         store.set(SCAN_HISTORY_KEY, store.get(SCAN_HISTORY_KEY, []).filter((x) => x.at !== item.at || x.text !== item.text));
         renderHistory();
       });
-      actions.append(copy, reuse, del);
+      actions.append(copy, reuse, star, del);
       li.append(img, meta, actions);
       list.appendChild(li);
     });
@@ -125,6 +252,23 @@
       undoLabel: 'Undo'
     });
   });
+
+  $('btn-export-scan-history').addEventListener('click', () => {
+    const items = store.get(SCAN_HISTORY_KEY, []);
+    if (!items.length) { toast('Nothing to export'); return; }
+    const payload = { app: 'qrsite', kind: 'scan-history', version: 1, exportedAt: new Date().toISOString(), items };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'qrsite-scan-history.json'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('Scan history exported');
+  });
+
+  const scanFilter = $('scan-filter');
+  if (scanFilter) {
+    scanFilter.addEventListener('input', renderHistory);
+  }
 
   renderHistory();
 

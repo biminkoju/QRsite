@@ -669,4 +669,12 @@
 
   renderQR();
   renderHistory();
+
+  /* Density toggle: Compact vs Comfortable for the history list */
+  var densityEl = $('density-compact');
+  if (densityEl) {
+    densityEl.addEventListener('change', function () {
+      document.body.classList.toggle('density-compact', densityEl.checked);
+    });
+  }
 })();

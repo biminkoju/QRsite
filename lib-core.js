@@ -61,8 +61,8 @@ window.QRS = window.QRS || {};
     syncThemeBtn();
   }
 
-  /* Theme is stored as JSON ('"light"'), but older builds stored it raw.
-   * Accept both shapes so light mode survives a reload. */
+  /* Theme: Light / Dark / System (prefers-color-scheme) stored as qrsite-theme.
+   * Values: null (system), 'light', 'dark'. System reads prefers-color-scheme. */
   QRS.readTheme = function () {
     var raw = null;
     try { raw = localStorage.getItem('qrsite-theme'); } catch (e) { return null; }
@@ -72,6 +72,12 @@ window.QRS = window.QRS || {};
       return typeof parsed === 'string' ? parsed : null;
     } catch (e) { return raw; }
   };
+
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme === 'light' ? 'light' : '';
+    QRS.store.set('qrsite-theme', theme || null);
+    syncThemeBtn();
+  }
 
   (function initTheme() {
     var stored = QRS.readTheme();
@@ -83,10 +89,19 @@ window.QRS = window.QRS || {};
     syncThemeBtn();
   })();
 
+  var themeBtnLabel = function () {
+    var cur = QRS.readTheme();
+    themeBtn.title = cur === null ? 'Theme: System' : 'Theme: ' + cur.charAt(0).toUpperCase() + cur.slice(1);
+  };
+
   if (themeBtn) {
     themeBtn.addEventListener('click', function () {
-      applyTheme(isLight() ? 'dark' : 'light');
+      var cur = QRS.readTheme();
+      var next = cur === null ? 'light' : cur === 'light' ? 'dark' : null;
+      applyTheme(next);
+      themeBtnLabel();
     });
+    themeBtnLabel();
   }
 
   var stopCameraHook = function () {};
