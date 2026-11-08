@@ -398,9 +398,9 @@ input[type="range"] { width: 100%; accent-color: var(--color-accent); }
 }
 .advanced summary::marker { display: none; }
 .advanced summary::-webkit-details-marker { display: none; }
-.advanced summary::after {
+.advanced summary::before {
   content: "▶";
-  margin-left: var(--space-1);
+  margin-right: var(--space-1);
   color: var(--color-accent);
   font-size: var(--text-xs);
   display: inline-block;
@@ -410,7 +410,7 @@ input[type="range"] { width: 100%; accent-color: var(--color-accent); }
   color: var(--color-accent);
   text-decoration-color: var(--color-accent);
 }
-.advanced[open] summary::after {
+.advanced[open] summary::before {
   transform: rotate(90deg);
 }
 
