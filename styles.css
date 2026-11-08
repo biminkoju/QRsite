@@ -381,11 +381,31 @@ input[type="range"] { width: 100%; accent-color: var(--color-accent); }
   padding-top: var(--space-4);
 }
 .advanced summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   cursor: pointer;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   list-style: none;
+  border-bottom: var(--border-width) solid transparent;
+  padding-bottom: var(--space-1);
+  transition: border-color var(--dur-fast), color var(--dur-fast);
+}
+.advanced summary .chevron {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  transition: transform var(--dur-fast) ease-out;
+}
+.advanced[open] summary {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+.advanced[open] summary .chevron {
+  transform: rotate(180deg);
 }
 .advanced summary::-webkit-details-marker { display: none; }
 
