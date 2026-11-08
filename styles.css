@@ -392,7 +392,6 @@ input[type="range"] { width: 100%; accent-color: var(--color-accent); }
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   list-style: none;
-  text-decoration: underline;
   text-underline-offset: var(--space-1);
   text-decoration-color: var(--color-text-muted);
 }
@@ -761,6 +760,7 @@ code {
 .toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
+  pointer-events: auto;
 }
 
 /* =============== Update banner =============== */
