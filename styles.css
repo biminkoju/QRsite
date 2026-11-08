@@ -393,16 +393,16 @@ input[type="range"] { width: 100%; accent-color: var(--color-accent); }
   text-underline-offset: var(--space-1);
   text-decoration-color: var(--color-text-muted);
 }
-.advanced summary .chevron {
-  font-size: var(--text-xs);
+.advanced summary::marker {
   color: var(--color-accent);
+  font-size: var(--text-xs);
   transition: transform var(--dur-fast) ease-out;
 }
 .advanced[open] summary {
   color: var(--color-accent);
   text-decoration-color: var(--color-accent);
 }
-.advanced[open] summary .chevron {
+.advanced[open] summary::marker {
   transform: rotate(180deg);
 }
 .advanced summary::-webkit-details-marker { display: none; }
